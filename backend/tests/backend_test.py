@@ -87,4 +87,8 @@ def test_comunas_endpoint(s):
     assert r.status_code == 200
     data = r.json()
     assert isinstance(data, list)
-    assert len(data) >= 1
+    # Must contain at least all seeded comunas and be sorted
+    expected_subset = {"Las Condes", "Providencia", "Maipú", "Ñuñoa", "Vitacura"}
+    assert expected_subset.issubset(set(data)), f"Missing comunas: {expected_subset - set(data)}"
+    assert data == sorted(data), "Comunas should be sorted alphabetically"
+    assert all(isinstance(c, str) and c for c in data)

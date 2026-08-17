@@ -1,0 +1,36 @@
+{
+  "summary": "Mapa tab feature end-to-end verified. Backend: 8/8 pytest passing including expanded /api/comunas assertions (subset check + sorted). Frontend at 390x844 web preview: all 5 tabs present (tab-home, tab-categorias, tab-favoritos, tab-mapa, tab-info) navigate correctly; tab-mapa opens mapa-screen with header 'Mapa de talleres' and subtitle '12 talleres'. Chip row shows comuna-all + 11 comuna-{name} chips (El Bosque, La Florida, Las Condes, Maipú, Providencia, Puente Alto, Recoleta, San Joaquín, Santiago, Vitacura, Ñuñoa). map-web fallback renders grouped-by-comuna list as expected (react-native-maps is native-only). Tapping comuna-Las Condes filters list to 2 rows and subtitle becomes '2 talleres en Las Condes'. comuna-all resets back to 12 rows. Tapping map-row-{id} navigates to /workshop/{id}. Regression checks: Inicio (logo, chips, list, turbo-fab -> /chat), Categorias, Favoritos, Info tabs all work; workshop detail still works. Deprecated shadow* / props.pointerEvents warnings observed (pre-existing, non-blocking).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "styles / shadow", "issue": "Console warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Pre-existing, non-blocking. Reference: /app/frontend/src/theme.ts (shadow.card, shadow.floating). Note: WorkshopsMap.native.tsx uses shadow.floating for the bottom card."},
+      {"component": "props.pointerEvents", "issue": "Console warning: 'props.pointerEvents is deprecated. Use style.pointerEvents'. Pre-existing, likely internal to expo-router / RN Web."}
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_7.json",
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: Migrate shadow.* props to boxShadow in /app/frontend/src/theme.ts to silence RN Web deprecation warning (also used by WorkshopsMap.native card).",
+    "No functional issues to fix. Feature is complete and correct."
+  ],
+  "critical_code_review_comments": [
+    "mapa.tsx correctly uses base-extension WorkshopsMap (Metro resolves .native.tsx on native, .tsx on web) — proper platform split for react-native-maps.",
+    "Backend /api/comunas returns db.workshops.distinct('comuna') sorted — matches contract expected by chip row and confirmed sorted alphabetically in test.",
+    "Chip row uses horizontal ScrollView with hitSlop and 40px height meeting touch target guidelines.",
+    "mapa-screen uses SafeAreaView insets.top for header — good for notched devices.",
+    "WorkshopsMap.native.tsx correctly filters points requiring numeric lat/lng and uses fitToCoordinates to fit markers with edgePadding."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py"],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Feature: Mapa tab. Web selectors: mapa-screen, comuna-all, comuna-{name} (e.g. comuna-Las Condes, comuna-Ñuñoa), map-web, map-row-{id}. Native selectors (Expo Go only, not testable in web preview): map-native, marker-{id}, map-card, map-card-close. Backend endpoint /api/comunas returns sorted list of unique comunas from workshops. 12 seeded workshops across 11 comunas. Las Condes has 2 workshops (Frenos Seguros Las Condes, AutoSpa Premium Wash).",
+  "rca_of_issue": "N/A — feature verification, all flows working as designed."
+}
