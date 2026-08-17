@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Depends, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,9 +7,12 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Annotated
 import uuid
-from datetime import datetime, timezone
+import bcrypt
+import jwt
+from jwt.exceptions import InvalidTokenError
+from datetime import datetime, timezone, timedelta
 
 
 ROOT_DIR = Path(__file__).parent
@@ -18,8 +22,80 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+# ----- Auth config -----
+JWT_SECRET = os.environ['JWT_SECRET']
+JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
+TOKEN_MINUTES = int(os.getenv('ACCESS_TOKEN_MINUTES', '1440'))
+ADMIN_EMAIL = os.environ['ADMIN_EMAIL'].strip().lower()
+ADMIN_PASSWORD = os.environ['ADMIN_PASSWORD']
+
 app = FastAPI(title="Vitrina Automotriz API")
 api_router = APIRouter(prefix="/api")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+
+def hash_password(password: str) -> str:
+    if not password or len(password.encode("utf-8")) > 72:
+        raise ValueError("Password must be 1-72 UTF-8 bytes")
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except (ValueError, TypeError):
+        return False
+
+
+DUMMY_HASH = hash_password("dummy-password-used-only-for-timing")
+
+
+def create_access_token(email: str) -> str:
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": email,
+        "role": "admin",
+        "iat": now,
+        "exp": now + timedelta(minutes=TOKEN_MINUTES),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+async def authenticate(email: str, password: str):
+    email = email.strip().lower()
+    admin = await db.admins.find_one({"email": email})
+    if not admin:
+        verify_password(password, DUMMY_HASH)
+        return None
+    return admin if verify_password(password, admin["password_hash"]) else None
+
+
+async def get_current_admin(token: str = Depends(oauth2_scheme)):
+    credentials_error = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="No autorizado",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        email = payload.get("sub")
+        if not email or payload.get("role") != "admin":
+            raise credentials_error
+    except InvalidTokenError:
+        raise credentials_error
+    admin = await db.admins.find_one({"email": email}, {"_id": 1, "email": 1, "role": 1})
+    if not admin or admin.get("role") != "admin":
+        raise credentials_error
+    return admin
+
+
+AdminDep = Annotated[dict, Depends(get_current_admin)]
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    email: str
 
 
 # ----- Models -----
@@ -300,6 +376,17 @@ async def seed_data():
             await db.workshops.insert_many(docs)
         logging.info(f"Seeded {len(docs)} workshops")
 
+    # Idempotent admin seed
+    await db.admins.create_index("email", unique=True, name="admin_email_unique")
+    existing = await db.admins.find_one({"email": ADMIN_EMAIL}, {"_id": 1})
+    if existing is None:
+        await db.admins.insert_one({
+            "email": ADMIN_EMAIL,
+            "password_hash": hash_password(ADMIN_PASSWORD),
+            "role": "admin",
+        })
+        logging.info("Seeded admin account")
+
 
 # ----- Endpoints -----
 @api_router.get("/")
@@ -357,11 +444,49 @@ async def get_workshop(workshop_id: str):
     return Workshop(**item)
 
 
+# ----- Auth -----
+@api_router.post("/auth/login", response_model=TokenOut)
+async def login(form: OAuth2PasswordRequestForm = Depends()):
+    admin = await authenticate(form.username, form.password)
+    if not admin:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Correo o contraseña incorrectos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return TokenOut(access_token=create_access_token(admin["email"]), email=admin["email"])
+
+
+@api_router.get("/auth/me")
+async def me(admin: AdminDep):
+    return {"email": admin["email"], "role": admin["role"]}
+
+
+# ----- Admin workshop CRUD (protected) -----
 @api_router.post("/workshops", response_model=Workshop)
-async def create_workshop(payload: WorkshopCreate):
+async def create_workshop(payload: WorkshopCreate, admin: AdminDep):
     ws = Workshop(**payload.dict())
     await db.workshops.insert_one(ws.dict())
     return ws
+
+
+@api_router.put("/workshops/{workshop_id}", response_model=Workshop)
+async def update_workshop(workshop_id: str, payload: WorkshopCreate, admin: AdminDep):
+    existing = await db.workshops.find_one({"id": workshop_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Workshop not found")
+    updates = payload.dict()
+    await db.workshops.update_one({"id": workshop_id}, {"$set": updates})
+    merged = await db.workshops.find_one({"id": workshop_id}, {"_id": 0})
+    return Workshop(**merged)
+
+
+@api_router.delete("/workshops/{workshop_id}")
+async def delete_workshop(workshop_id: str, admin: AdminDep):
+    result = await db.workshops.delete_one({"id": workshop_id})
+    if result.deleted_count != 1:
+        raise HTTPException(status_code=404, detail="Workshop not found")
+    return {"deleted": True, "id": workshop_id}
 
 
 app.include_router(api_router)

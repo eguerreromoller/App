@@ -5,6 +5,7 @@ import { LogBox } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 
@@ -30,15 +31,20 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#FFFFFF" } }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="workshop/[id]" options={{ presentation: "card", animation: "slide_from_right" }} />
-          <Stack.Screen name="workshops" options={{ presentation: "card", animation: "slide_from_right" }} />
-        </Stack>
-      </SafeAreaProvider>
+      <KeyboardProvider>
+        <SafeAreaProvider>
+          <StatusBar style="dark" />
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#FFFFFF" } }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="workshop/[id]" options={{ presentation: "card", animation: "slide_from_right" }} />
+            <Stack.Screen name="workshops" options={{ presentation: "card", animation: "slide_from_right" }} />
+            <Stack.Screen name="admin/login" options={{ presentation: "card", animation: "slide_from_right" }} />
+            <Stack.Screen name="admin/index" options={{ presentation: "card", animation: "slide_from_right" }} />
+            <Stack.Screen name="admin/form" options={{ presentation: "card", animation: "slide_from_right" }} />
+          </Stack>
+        </SafeAreaProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

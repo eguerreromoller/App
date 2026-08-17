@@ -1,7 +1,9 @@
 import { View, Text, StyleSheet, ScrollView, Pressable, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { isLoggedIn } from "@/src/admin";
 import { colors, radius, spacing, typography } from "@/src/theme";
 
 const WHATSAPP = "56932196215";
@@ -9,6 +11,7 @@ const PORTAL_URL = "https://vitrinaautomotriz.cl/";
 
 export default function InfoScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   const openWhatsApp = () => Linking.openURL(`https://wa.me/${WHATSAPP}`);
   const openPortal = () => Linking.openURL(PORTAL_URL);
@@ -16,6 +19,11 @@ export default function InfoScreen() {
     Linking.openURL("https://www.facebook.com/profile.php?id=61555561365100");
   const openInstagram = () =>
     Linking.openURL("https://www.instagram.com/portalvitrinaautomotriz/");
+
+  const openAdmin = async () => {
+    const ok = await isLoggedIn();
+    router.push((ok ? "/admin" : "/admin/login") as any);
+  };
 
   return (
     <ScrollView
@@ -78,6 +86,19 @@ export default function InfoScreen() {
           <Ionicons name="logo-instagram" size={20} color={colors.brandPrimary} />
         </View>
         <Text style={[styles.rowTitle, { flex: 1 }]}>Instagram</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.onSurfaceSecondary} />
+      </Pressable>
+
+      <Text style={styles.section}>Gestión</Text>
+
+      <Pressable style={styles.row} onPress={openAdmin} testID="row-admin">
+        <View style={[styles.iconBox, { backgroundColor: colors.surfaceInverse }]}>
+          <Ionicons name="lock-closed" size={18} color="#FFFFFF" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.rowTitle}>Administración</Text>
+          <Text style={styles.rowSub}>Agregar y editar talleres</Text>
+        </View>
         <Ionicons name="chevron-forward" size={18} color={colors.onSurfaceSecondary} />
       </Pressable>
 

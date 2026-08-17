@@ -27,11 +27,16 @@ Bottom tabs: Inicio (`/(tabs)`), Categorías, Favoritos, Info. Stack: `/workshop
 
 ## Not Included (yet)
 - Native map view (deep links to system maps instead).
-- Auth / user accounts / reviews submission.
-- Admin panel (POST endpoint exists; UI not built).
+- User accounts / reviews submission.
 - Real scraped data from vitrinaautomotriz.cl (placeholder seed data).
 
+## Admin Panel (added 2026-08-17)
+- JWT auth (FastAPI + bcrypt). Admin seeded idempotently from backend `.env`.
+- Credentials: `admin@vitrinaautomotriz.cl` / `Vitrina2026!` (in `/app/memory/test_credentials.md`).
+- Endpoints: `POST /api/auth/login` (form: username, password), `GET /api/auth/me`, protected `POST/PUT/DELETE /api/workshops`.
+- Frontend: Info tab → **Administración** → `/admin/login` → `/admin` dashboard (list, edit, delete, add) → `/admin/form` (create/edit with category chips, services, hours, featured toggle). Token stored via `storage.secureSet` key `va_admin_token`. Keyboard handled with react-native-keyboard-controller.
+
 ## Next Steps
-- Import real workshop dataset (CSV/JSON or scrape) via POST /api/workshops.
-- Add ratings/reviews submission and optional user accounts.
-- Optional native map with react-native-maps + geolocation permission.
+- Import real workshop dataset (CSV/JSON or scrape) via admin panel or bulk endpoint.
+- Add image upload (Emergent Object Storage) instead of pasting image URLs.
+- Ratings/reviews submission and optional map view.
