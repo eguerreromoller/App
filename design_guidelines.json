@@ -1,0 +1,192 @@
+{
+  "app_name": "Vitrina Automotriz",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "Clean, native layout framing automotive services clearly, prioritizing trust, real imagery, and fast utility.",
+  "color": {
+    "surface": "#FFFFFF",
+    "onSurface": "#11181C",
+    "surfaceSecondary": "#F8F9FA",
+    "onSurfaceSecondary": "#687076",
+    "surfaceTertiary": "#F1F3F5",
+    "onSurfaceTertiary": "#495057",
+    "surfaceInverse": "#212529",
+    "onSurfaceInverse": "#F8F9FA",
+    "brand": "#2B8A3E",
+    "brandPrimary": "#2B8A3E",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#EBFBEE",
+    "onBrandSecondary": "#2B8A3E",
+    "brandTertiary": "#D3F9D8",
+    "onBrandTertiary": "#092811",
+    "success": "#2F9E44",
+    "onSuccess": "#FFFFFF",
+    "warning": "#F59F00",
+    "onWarning": "#FFFFFF",
+    "error": "#E03131",
+    "onError": "#FFFFFF",
+    "info": "#868E96",
+    "onInfo": "#FFFFFF",
+    "border": "#E9ECEF",
+    "borderStrong": "#CED4DA",
+    "divider": "#F1F3F5"
+  },
+  "typography": {
+    "displayFontFamily": "Plus Jakarta Sans",
+    "textFontFamily": "Plus Jakarta Sans",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Handle spacing correctly dont have extra spaces where its not required, handle padding and margin corectly and subtle for buttons and components",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "1",
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": "true",
+    "do's": [
+      "Use glass on bottom tab bar",
+      "Use glass on sticky headers over scrolling content",
+      "Use glass on FABs layered over maps",
+      "Use on featured hero cards overlaying photos"
+    ],
+    "dont's": [
+      "Do not use glass on form inputs or standard list rows",
+      "Do not use glass if it impairs text legibility"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Home",
+      "purpose": "Discover and browse featured and local automotive workshops.",
+      "states": {
+        "loading": "Centered spinner with a subtle skeleton for the featured card.",
+        "empty": "Illustration of an empty garage + 'No workshops found matching your filters' + Clear Filters button.",
+        "error": "Error message + 'Tap to retry' button."
+      },
+      "layout": "Sticky search bar at the top (under safe area). Below that, a horizontal scrolling chip row for categories (Mecánica, Pintura, etc.) using brandTertiary for unselected and brandPrimary for selected. Below, a horizontal carousel of 'Featured Workshops' full-bleed cards with photos, gradient scrims, and text anchored at bottom. Underneath, a vertical list of nearby workshops (Yelp style: image on left, title, rating, and contextual badges like distance on right)."
+    },
+    {
+      "name": "Map",
+      "purpose": "Locate nearby workshops visually on a map.",
+      "states": {
+        "loading": "Map loads with a subtle pulse effect.",
+        "empty": "Map shows default Chile center, toast indicating no nearby workshops.",
+        "error": "Map fails to load, text overlay 'Unable to load map' + Retry."
+      },
+      "layout": "Full-screen map layer taking up flex: 1. Floating glass search bar at top. Floating Action Button (glass) for 'My Location' at bottom right. A @gorhom/bottom-sheet that peaks slightly, showing a list of workshops in the current viewport. Tapping a map pin fully opens the bottom sheet with that specific workshop's detail card."
+    },
+    {
+      "name": "Favorites",
+      "purpose": "Quick access to saved and frequently visited workshops.",
+      "states": {
+        "loading": "List skeleton.",
+        "empty": "Empty street night image + 'No favorite workshops yet' + 'Explore Workshops' CTA.",
+        "error": "Standard error overlay."
+      },
+      "layout": "Simple, clean vertical list. Each list item has 56pt minimum height, leading image thumbnail, title, rating, and chevron right. Swipe-to-delete gesture available on rows."
+    },
+    {
+      "name": "WorkshopDetail",
+      "purpose": "View comprehensive details of a specific workshop and initiate contact.",
+      "states": {
+        "loading": "Hero image skeleton + text skeletons.",
+        "empty": "N/A",
+        "error": "Error loading details + Retry button."
+      },
+      "layout": "Scrollable view. Top hero image using expo-image with a 3-stop vertical gradient scrim (transparent to 70% surfaceInverse). Workshop title overlaid at the bottom of the scrim. Immediately below the hero, a horizontal row of icon-only or short-text action pills (Call, WhatsApp, Directions). Sections follow: 'Services Offered' (wrapping chips), 'Description' (body text), 'Opening Hours' (key-value rows), and 'Ratings'. A sticky CTA at the very bottom 'Contact Workshop' anchored above the home indicator."
+    },
+    {
+      "name": "Profile",
+      "purpose": "Manage app settings and user info.",
+      "states": {
+        "loading": "Standard spinner.",
+        "empty": "N/A",
+        "error": "Standard error overlay."
+      },
+      "layout": "Native iOS-style settings list. Each row uses a tinted icon container on the left (brandTertiary with brandPrimary icon), text, and a right chevron. Content grouped into 'Account', 'Preferences', and 'About'."
+    }
+  ],
+  "images": {
+    "hero_featured": {
+      "url": "https://images.pexels.com/photos/8387509/pexels-photo-8387509.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Front view of an auto repair shop with roll-up doors"
+    },
+    "cat_mechanic": {
+      "url": "https://images.unsplash.com/photo-1615906655593-ad0386982a0f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA4Mzl8MHwxfHNlYXJjaHwxfHxjYXIlMjBtZWNoYW5pYyUyMHdvcmtpbmd8ZW58MHx8fHwxNzg2OTQ3MTU4fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Mechanic working on car engine"
+    },
+    "cat_paint": {
+      "url": "https://images.pexels.com/photos/30250199/pexels-photo-30250199.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Technician spray painting a car"
+    },
+    "cat_brakes": {
+      "url": "https://images.pexels.com/photos/34277926/pexels-photo-34277926.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Detailed view of car brake caliper"
+    },
+    "cat_tire": {
+      "url": "https://images.unsplash.com/photo-1645445522156-9ac06bc7a767?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA4Mzl8MHwxfHNlYXJjaHwxfHxjYXIlMjB0aXJlJTIwY2hhbmdlfGVufDB8fHx8MTc4Njk0NzE1OHww&ixlib=rb-4.1.0&q=85",
+      "alt": "Man changing a car tire"
+    },
+    "cat_oil": {
+      "url": "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxjYXIlMjBvaWwlMjBjaGFuZ2V8ZW58MHx8fHwxNzg2OTQ3MTU4fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Refilling motor oil"
+    },
+    "empty_favorites": {
+      "url": "https://images.unsplash.com/photo-1566276423184-a8c13d2a88a1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwyfHxlbXB0eSUyMHN0cmVldCUyMG5pZ2h0fGVufDB8fHx8MTc4Njk0NzE1OHww&ixlib=rb-4.1.0&q=85",
+      "alt": "Empty street night"
+    },
+    "workshop_list_1": {
+      "url": "https://images.pexels.com/photos/12579236/pexels-photo-12579236.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Automotive repair shop at sunset"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly adhere to the '1 iOS-Native Clean' personality: Generous vertical padding, clear grouping, no muddy colors, frame content with UI.",
+    "Do NOT use any blue, indigo, or purple. Stick to the provided Moss Green (brand) and Charcoal (onSurface/Inverse) palette.",
+    "Implement horizontal chip row for workshop categories on the Home screen.",
+    "Apply gradient scrims over any text resting on images (e.g., featured carousel and workshop detail hero). Use a 3-stop vertical gradient from transparent to 70% surfaceInverse.",
+    "Build the Map view using a full-screen layout with floating glass actions and a gorhom bottom-sheet for displaying location lists.",
+    "Always preserve Safe Area. Ensure the sticky CTA on the Workshop Detail screen stays above the home indicator.",
+    "Wire subtle haptics to the category chips, tab changes, and primary action buttons (like Call or WhatsApp).",
+    "List rows should emulate modern directories (like Yelp) with left-aligned imagery and contextual right-aligned details (ratings, distance).",
+    "Learnings from research: Optimize card-based layouts to balance visuals and actionable data. Keep context badges (ratings, category) visible but not overwhelming."
+  ],
+  "haptics": {
+    "tab_press": "light",
+    "chip_select": "light",
+    "button_primary": "medium",
+    "map_pin_tap": "medium",
+    "add_to_favorites": "success"
+  }
+}
