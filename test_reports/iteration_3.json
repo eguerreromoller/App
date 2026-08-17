@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 3 re-tested the admin panel with the updated credentials (contacto@vitrinaautomotriz.cl / 1713132). Backend: 9/9 pytest cases pass (login OK with new creds, wrong-password 401, wrong-email 401, /auth/me with/without/invalid token, protected POST/PUT/DELETE 401 without token, full create→GET→update→GET→404 update-nonexistent→delete→404 with token). Frontend (mobile viewport 390x844): Info → row-admin opens admin-login-screen; wrong password shows 'Correo o contraseña incorrectos'; correct creds navigate to admin-dashboard (13 talleres in DB before, back to 12 after cleanup). Full UI CRUD verified: admin-add → admin-form → filled name/f-cat-frenos/address/comuna/phone/image → form-save → new row visible; admin-edit-{id} prefilled → save updates name; admin-delete-{id} → admin-delete-confirm-{id} → row removed. admin-logout clears session (subsequent tap on Administración row shows login screen again). No new bugs found. Minor cosmetic: login screen email placeholder still says 'admin@vitrinaautomotriz.cl' — misleading since the actual admin is 'contacto@vitrinaautomotriz.cl'. Deprecated React Native Web warnings persist (shadow* → boxShadow, props.pointerEvents → style.pointerEvents) — non-blocking.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "app/admin/login.tsx", "issue": "Email TextInput placeholder is 'admin@vitrinaautomotriz.cl' but the seeded admin email is 'contacto@vitrinaautomotriz.cl'. Update placeholder to avoid misleading users.", "testID": "login-email", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "global", "issues": ["RN Web console still emits deprecation warnings: 'shadow*' style props (use boxShadow) and props.pointerEvents (use style.pointerEvents). Non-blocking; carried over from iteration 1."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_admin_auth.py",
+    "/app/test_reports/pytest/admin_auth_results.xml",
+    "/app/backend/tests/backend_test.py"
+  ],
+  "action_items": [
+    "Update /app/frontend/app/admin/login.tsx placeholder from 'admin@vitrinaautomotriz.cl' to 'contacto@vitrinaautomotriz.cl' (or keep it generic).",
+    "Optional cleanup: migrate deprecated 'shadow*' StyleSheet props to boxShadow and props.pointerEvents to style.pointerEvents."
+  ],
+  "critical_code_review_comments": [
+    "server.py: bcrypt (cost 12) + DUMMY_HASH timing-equalization is good.",
+    "server.py: idempotent admin seed with unique index on admins.email — safe across restarts and email/password changes (only inserts if the email doesn't exist).",
+    "JWT_SECRET/ALGORITHM/TTL loaded from env; ADMIN_EMAIL/ADMIN_PASSWORD loaded from env with no defaults — good.",
+    "Token stored in expo-secure-store under 'va_admin_token'; authFetch clears it on 401.",
+    "Workshop CRUD correctly projects _id out on read/update — no ObjectId leakage.",
+    "Login uses OAuth2PasswordRequestForm (x-www-form-urlencoded) as expected; frontend adminLogin sends URLSearchParams.",
+    "Note (not a bug): if the admin email is changed in .env after first seed, the previous admin doc remains in the collection. Consider documenting or add a small ops note.",
+    "React Native components used correctly (View/Text/Pressable/TextInput); StyleSheet.create; all interactive elements have testID."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_admin_auth.py (updated ADMIN_EMAIL/ADMIN_PASSWORD to contacto@vitrinaautomotriz.cl / 1713132)"
+  ],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "100% of tested flows (login-error, login-success, list, create, edit, delete-with-confirm, logout, session-clear)"},
+  "seed_data_creation": "Created 1 TEST_ workshop via UI and deleted it via UI. Cleaned leftover TEST_ items from prior iteration. Final state: 0 TEST_ workshops remaining; original 12 seeded workshops intact.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Admin creds are now: contacto@vitrinaautomotriz.cl / 1713132 (from /app/backend/.env and /app/memory/test_credentials.md). Login: POST /api/auth/login (application/x-www-form-urlencoded, fields username/password). Token stored in expo-secure-store key 'va_admin_token'. Frontend testIDs: tab-info, row-admin, admin-login-screen, login-email, login-password, login-submit, login-error, admin-dashboard, admin-add (FAB), admin-edit-{id}, admin-delete-{id}, admin-delete-confirm-{id}, admin-logout, admin-form, f-name, f-cat-{key}, f-desc, f-address, f-comuna, f-phone, f-whatsapp, f-email, f-website, f-image, f-services, f-hours, f-featured, form-save, form-error. IMPORTANT PLAYWRIGHT TIP: Expo Router keeps prior admin screens mounted, so selectors like [data-testid=\"admin-dashboard\"], [data-testid^=\"admin-\"] may resolve to 2 elements — iterate matches and click the *visible* one (offsetParent !== null) or use .last; always scroll_into_view_if_needed() before clicking rows lower in the FlatList.",
+  "rca_of_issue": "N/A — no bugs found. Only pre-existing cosmetic placeholder mismatch on login screen."
+}

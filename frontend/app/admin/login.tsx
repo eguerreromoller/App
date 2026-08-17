@@ -67,7 +67,7 @@ export default function AdminLoginScreen() {
         <TextInput
           testID="login-email"
           style={styles.input}
-          placeholder="admin@vitrinaautomotriz.cl"
+          placeholder="contacto@vitrinaautomotriz.cl"
           placeholderTextColor={colors.onSurfaceSecondary}
           value={email}
           onChangeText={setEmail}
