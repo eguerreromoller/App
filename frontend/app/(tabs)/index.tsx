@@ -44,7 +44,7 @@ export default function HomeScreen() {
       setCategories(cats);
       setFeatured(feat);
       setWorkshops(all);
-    } catch (e: any) {
+    } catch {
       setError("No se pudo cargar. Toca para reintentar.");
     } finally {
       setLoading(false);
@@ -98,7 +98,12 @@ export default function HomeScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]} testID="home-screen">
       {/* Sticky Header */}
       <View style={styles.header}>
-        <Text style={styles.brand} testID="brand-title">Vitrina Automotriz</Text>
+        <Image
+          source={require("../../assets/images/vitrina-logo.png")}
+          style={styles.logo}
+          contentFit="contain"
+          testID="brand-logo"
+        />
         <Text style={styles.subtitle}>Encuentra el taller ideal para tu auto</Text>
         <View style={styles.searchWrap}>
           <Ionicons name="search" size={18} color={colors.onSurfaceSecondary} />
@@ -216,6 +221,23 @@ export default function HomeScreen() {
           </View>
         }
       />
+
+      {/* Turbo AI floating button */}
+      <Pressable
+        style={styles.turboFab}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          router.push("/chat" as any);
+        }}
+        testID="turbo-fab"
+      >
+        <Image
+          source={require("../../assets/images/turbo-avatar.png")}
+          style={styles.turboAvatar}
+          contentFit="cover"
+        />
+        <View style={styles.turboPulse} />
+      </Pressable>
     </View>
   );
 }
@@ -235,6 +257,7 @@ function Chip({
     <Pressable
       testID={testID}
       onPress={onPress}
+      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
       style={[
         styles.chip,
         active ? { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary } : null,
@@ -335,6 +358,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   brand: { fontSize: typography.xxl, fontWeight: "800", color: colors.onSurface, letterSpacing: -0.5 },
+  logo: { width: 180, height: 52, alignSelf: "flex-start", marginLeft: -2 },
   subtitle: { fontSize: typography.base, color: colors.onSurfaceSecondary, marginTop: 2 },
   searchWrap: {
     flexDirection: "row",
@@ -352,12 +376,12 @@ const styles = StyleSheet.create({
     fontSize: typography.lg,
     padding: 0,
   },
-  chipRowScroll: { marginTop: spacing.md, marginHorizontal: -spacing.lg, height: 44 },
+  chipRowScroll: { marginTop: spacing.md, marginHorizontal: -spacing.lg, height: 48 },
   chipRow: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: "center" },
   chip: {
     flexShrink: 0,
-    height: 36,
-    paddingHorizontal: spacing.md,
+    height: 40,
+    paddingHorizontal: spacing.lg,
     borderRadius: radius.pill,
     backgroundColor: colors.brandSecondary,
     borderWidth: 1,
@@ -431,4 +455,28 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   emptyBtnText: { color: colors.onBrandPrimary, fontWeight: "700", fontSize: typography.base },
+  turboFab: {
+    position: "absolute",
+    right: spacing.lg,
+    bottom: spacing.lg,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow.floating,
+  },
+  turboAvatar: { width: 60, height: 60, borderRadius: 30 },
+  turboPulse: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.success,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
 });

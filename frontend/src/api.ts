@@ -55,4 +55,13 @@ export const api = {
     return req<Workshop[]>(`/workshops${q ? `?${q}` : ""}`);
   },
   workshop: (id: string) => req<Workshop>(`/workshops/${id}`),
+  chat: async (session_id: string, message: string) => {
+    const res = await fetch(`${API_BASE}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id, message }),
+    });
+    if (!res.ok) throw new Error(`chat ${res.status}`);
+    return res.json() as Promise<{ reply: string; recommendations: Workshop[] }>;
+  },
 };

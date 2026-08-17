@@ -1,0 +1,30 @@
+{
+  "summary": "Frontend re-test after font-scaling cap (maxFontSizeMultiplier=1.2 on Text/TextInput in _layout.tsx) and larger category chip touch targets (36->40 height, chipRowScroll 44->48, hitSlop added). Verified at mobile viewport 390x844. Home screen loads with brand-logo, search-input, chip row (all 10 chips on ONE horizontal scroll row at top=146, height=40), featured carousel and workshop list. No vertical overflow (doc height == window height = 844). Category chip tap turns green (rgb(43,138,62) brandPrimary) and filters list (mecanica-general -> 3 rows). Search 'auto' filters to 4 rows. Workshop row navigates to /workshop/{id}. Tabs Categorias/Favoritos/Info all navigate. turbo-fab at bbox (310,700,64,64) still visible bottom-right and opens /chat. Turbo chat end-to-end works: chat-input + chat-send -> AI reply with 1 recommendation card (rec-*).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "styles / shadow", "issue": "Console warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Non-blocking, but should be migrated. Reference: /app/frontend/src/theme.ts (shadow.card, shadow.floating)"},
+      {"component": "props.pointerEvents", "issue": "Console warning: 'props.pointerEvents is deprecated. Use style.pointerEvents'. Non-blocking (likely internal to RN Web / expo router). Monitor upstream."}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_6.json"],
+  "action_items": [
+    "No further action required for the font-scaling / chip touch-target fix — verified at default viewport. Note: the maxFontSizeMultiplier=1.2 cap only shows visible effect on a real device where OS font scale > 1.2; at web preview default (scale=1) rendering is unchanged, which is the expected behaviour and confirms no layout regression.",
+    "OPTIONAL: Migrate shadow.* props to boxShadow in /app/frontend/src/theme.ts to silence RN Web deprecation warning."
+  ],
+  "critical_code_review_comments": [
+    "_layout.tsx correctly applies maxFontSizeMultiplier=1.2 via defaultProps on both Text and TextInput before any screen renders — good approach for React Native.",
+    "Chip touch targets now 40px tall inside a 48px row with hitSlop {top:8,bottom:8,left:4,right:4} — effective hit area ~56px vertical which comfortably clears 44pt minimum.",
+    "All 10 category chips render on one horizontal scroll row (top=146, height=40) with horizontal ScrollView — no wrapping, as intended."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "At 390x844: brand-logo, search-input, chip-all..chip-{key}, turbo-fab bbox (310,700,64x64), workshop-row-{id}, tab-{inicio,categorias,favoritos,info}, chat-input, chat-send, rec-{id}. Chip row has fixed height 48 with chips of height 40 on a single horizontal scroll row. Chat AI reply may take 10-16s; wait accordingly.",
+  "rca_of_issue": "User reported oversized UI + overflow on a real Android device due to OS accessibility font scale. Fix caps maxFontSizeMultiplier at 1.2 on Text/TextInput globally via defaultProps in app/_layout.tsx, and enlarges category chip height 36->40 + row 44->48 with hitSlop for a larger touch target. Verified at web preview default font scale (1.0): layout unchanged (no regression) and chip row remains single-scroll with all 10 chips tappable. Real-device visual improvement (when scale >1.2) cannot be re-verified in web preview but the cap is applied at RN default-prop level so all Text/TextInput inherit it."
+}

@@ -32,11 +32,14 @@ Spanish-language mobile app (Expo React Native) that lets Chilean drivers discov
 Bottom tabs: Inicio, Categorías, Favoritos, Info. Stack: `/workshops?category=…`, `/workshop/[id]`, `/admin/login`, `/admin` (dashboard), `/admin/form` (create/edit via `?id=`).
 
 ## Implemented (dates)
-- 2026-06: MVP directory (browse/search/filter/detail/favorites/info). Backend seed + endpoints. Testing 8/8 backend + all frontend flows.
-- 2026-06: Admin panel with JWT auth + workshop CRUD. Testing 9/9 backend + full UI CRUD verified. Credentials set to contacto@vitrinaautomotriz.cl.
+- 2026-06: MVP directory (browse/search/filter/detail/favorites/info). Backend seed + endpoints.
+- 2026-06: Admin panel with JWT auth + workshop CRUD. Credentials contacto@vitrinaautomotriz.cl.
+- 2026-06: Portal logo added to Home + Info headers (image optimized/cropped to 800x233).
+- 2026-06: "Turbo" AI assistant (OpenAI gpt-5.4 via emergentintegrations/EMERGENT_LLM_KEY). Floating button on Home → /chat. Multi-turn, asks servicio+comuna, recommends ONLY DB workshops via <<RECS:ids>> marker, returns tappable recommendation cards. History persisted in chat_messages by session_id.
+- 2026-06: Global font-scaling cap (maxFontSizeMultiplier=1.2 on Text/TextInput) to prevent overflow on devices with large system fonts; enlarged category chip touch targets (40pt + hitSlop).
 
 ## Backlog / Next
-- Import real workshop dataset (CSV/JSON or scrape vitrinaautomotriz.cl) — bulk import.
+- Import real workshop dataset (CSV/JSON or scrape) — bulk import.
 - Image upload from device (Emergent Object Storage) instead of pasting URL.
 - Optional native map view (react-native-maps) + geolocation.
-- Ratings/reviews submission and optional public user accounts.
+- Ratings/reviews submission.

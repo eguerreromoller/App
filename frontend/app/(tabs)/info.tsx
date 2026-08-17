@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, Pressable, Linking } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -32,10 +33,12 @@ export default function InfoScreen() {
       testID="info-screen"
     >
       <View style={styles.header}>
-        <View style={styles.logoCircle}>
-          <Ionicons name="car-sport" size={36} color={colors.brandPrimary} />
-        </View>
-        <Text style={styles.title}>Vitrina Automotriz</Text>
+        <Image
+          source={require("../../assets/images/vitrina-logo.png")}
+          style={styles.headerLogo}
+          contentFit="contain"
+          testID="info-logo"
+        />
         <Text style={styles.subtitle}>Juntos en el cuidado de tu vehículo</Text>
       </View>
 
@@ -110,6 +113,7 @@ export default function InfoScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
   header: { alignItems: "center", padding: spacing.xl },
+  headerLogo: { width: 220, height: 64, marginBottom: spacing.sm },
   logoCircle: {
     width: 72,
     height: 72,

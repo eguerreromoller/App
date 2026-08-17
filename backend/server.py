@@ -28,6 +28,7 @@ JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
 TOKEN_MINUTES = int(os.getenv('ACCESS_TOKEN_MINUTES', '1440'))
 ADMIN_EMAIL = os.environ['ADMIN_EMAIL'].strip().lower()
 ADMIN_PASSWORD = os.environ['ADMIN_PASSWORD']
+EMERGENT_LLM_KEY = os.getenv('EMERGENT_LLM_KEY', '')
 
 app = FastAPI(title="Vitrina Automotriz API")
 api_router = APIRouter(prefix="/api")
@@ -487,6 +488,121 @@ async def delete_workshop(workshop_id: str, admin: AdminDep):
     if result.deleted_count != 1:
         raise HTTPException(status_code=404, detail="Workshop not found")
     return {"deleted": True, "id": workshop_id}
+
+
+# ----- Turbo AI Assistant -----
+class ChatIn(BaseModel):
+    session_id: str
+    message: str
+
+
+class ChatOut(BaseModel):
+    reply: str
+    recommendations: List[Workshop] = []
+
+
+def _cat_name(key: str) -> str:
+    for c in CATEGORIES:
+        if c["key"] == key:
+            return c["name"]
+    return key
+
+
+async def _build_catalog() -> str:
+    cursor = db.workshops.find({}, {"_id": 0})
+    items = await cursor.to_list(length=500)
+    lines = []
+    for w in items:
+        servicios = ", ".join(w.get("services", []))
+        lines.append(
+            f"- ID: {w['id']} | Nombre: {w['name']} | Categoría: {_cat_name(w.get('category',''))} "
+            f"| Comuna: {w.get('comuna','')} | Servicios: {servicios}"
+        )
+    return "\n".join(lines)
+
+
+@api_router.post("/chat", response_model=ChatOut)
+async def chat(payload: ChatIn):
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=503, detail="Asistente no disponible")
+
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+
+    catalog = await _build_catalog()
+
+    # Prior conversation for this session
+    history = await db.chat_messages.find(
+        {"session_id": payload.session_id}, {"_id": 0}
+    ).sort("created_at", 1).to_list(length=50)
+
+    transcript = ""
+    for m in history:
+        who = "Cliente" if m["role"] == "user" else "Turbo"
+        transcript += f"{who}: {m['content']}\n"
+
+    system_message = (
+        "Eres 'Turbo', el asistente virtual de Vitrina Automotriz, un directorio de talleres "
+        "automotrices en Chile. Hablas SIEMPRE en español chileno, de forma cordial, breve y "
+        "cercana. Tu objetivo es entender qué servicio necesita el cliente para su vehículo y en "
+        "qué comuna se encuentra, y luego recomendarle el o los talleres más adecuados EXCLUSIVAMENTE "
+        "de la siguiente lista. NUNCA inventes talleres, teléfonos ni datos que no estén en la lista.\n\n"
+        "Reglas:\n"
+        "1. Si aún no sabes el servicio o la comuna, haz UNA pregunta corta para averiguarlo. No pidas todo de golpe.\n"
+        "2. Cuando tengas suficiente información, recomienda 1 a 3 talleres de la lista, mencionando su nombre y comuna, y explica brevemente por qué encajan.\n"
+        "3. Si no hay un taller en la comuna exacta, ofrece el más cercano o relevante de la lista y acláralo.\n"
+        "4. Sé conciso (máximo 4 frases antes de recomendar).\n"
+        "5. Al final de tu mensaje, SIEMPRE agrega en una línea aparte el marcador con los IDs de los talleres que recomiendas en este turno, así: <<RECS:id1,id2>>. Si en este turno no recomiendas ninguno todavía, escribe <<RECS:>>. Este marcador es obligatorio y no debes explicarlo al cliente.\n\n"
+        f"LISTA DE TALLERES DISPONIBLES:\n{catalog}"
+    )
+
+    user_text = payload.message
+    if transcript:
+        user_text = (
+            f"Conversación hasta ahora:\n{transcript}\n"
+            f"Nuevo mensaje del cliente: {payload.message}"
+        )
+
+    chat_client = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=payload.session_id,
+        system_message=system_message,
+    ).with_model("openai", "gpt-5.4")
+
+    try:
+        raw = await chat_client.send_message(UserMessage(text=user_text))
+    except Exception as e:
+        logging.exception("Turbo chat error")
+        raise HTTPException(status_code=502, detail="No se pudo generar respuesta")
+
+    reply_text = raw if isinstance(raw, str) else str(raw)
+
+    # Parse recommendation marker
+    rec_ids: List[str] = []
+    import re
+    m = re.search(r"<<RECS:([^>]*)>>", reply_text)
+    if m:
+        ids_part = m.group(1).strip()
+        if ids_part:
+            rec_ids = [x.strip() for x in ids_part.split(",") if x.strip()]
+        reply_text = re.sub(r"<<RECS:[^>]*>>", "", reply_text).strip()
+
+    recs: List[Workshop] = []
+    if rec_ids:
+        found = await db.workshops.find(
+            {"id": {"$in": rec_ids}}, {"_id": 0}
+        ).to_list(length=10)
+        by_id = {w["id"]: w for w in found}
+        for rid in rec_ids:
+            if rid in by_id:
+                recs.append(Workshop(**by_id[rid]))
+
+    now = datetime.now(timezone.utc).isoformat()
+    await db.chat_messages.insert_many([
+        {"session_id": payload.session_id, "role": "user", "content": payload.message, "created_at": now},
+        {"session_id": payload.session_id, "role": "assistant", "content": reply_text, "created_at": now},
+    ])
+
+    return ChatOut(reply=reply_text, recommendations=recs)
 
 
 app.include_router(api_router)
