@@ -43,6 +43,8 @@ export default function AdminForm() {
   const [services, setServices] = useState("");
   const [hoursText, setHoursText] = useState("");
   const [featured, setFeatured] = useState(false);
+  const [rating, setRating] = useState("");
+  const [reviewCount, setReviewCount] = useState("");
 
   const init = useCallback(async () => {
     const ok = await isLoggedIn();
@@ -72,6 +74,8 @@ export default function AdminForm() {
             .join("\n")
         );
         setFeatured(w.is_featured);
+        setRating(w.rating != null ? String(w.rating) : "");
+        setReviewCount(w.review_count != null ? String(w.review_count) : "");
       } else if (c.length > 0) {
         setCategory(c[0].key);
       }
@@ -100,6 +104,22 @@ export default function AdminForm() {
           hours[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
         }
       });
+
+    let ratingNum: number | undefined;
+    if (rating.trim()) {
+      const r = parseFloat(rating.replace(",", "."));
+      if (isNaN(r) || r < 0 || r > 5) {
+        setError("La puntuación de Google debe ser un número entre 0 y 5");
+        return null;
+      }
+      ratingNum = r;
+    }
+    let reviewNum: number | undefined;
+    if (reviewCount.trim()) {
+      const n = parseInt(reviewCount.replace(/[^\d]/g, ""), 10);
+      if (!isNaN(n)) reviewNum = n;
+    }
+
     return {
       name: name.trim(),
       category,
@@ -117,6 +137,8 @@ export default function AdminForm() {
         .filter(Boolean),
       hours,
       is_featured: featured,
+      rating: ratingNum,
+      review_count: reviewNum,
     };
   };
 
@@ -132,7 +154,7 @@ export default function AdminForm() {
         await createWorkshop(payload);
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace("/admin" as any);
+      router.back();
     } catch (e: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(e?.message || "No se pudo guardar.");
@@ -193,6 +215,31 @@ export default function AdminForm() {
         <Field label="Sitio web" value={website} onChangeText={setWebsite} testID="f-website" placeholder="https://..." />
         <Field label="URL de imagen *" value={imageUrl} onChangeText={setImageUrl} testID="f-image" placeholder="https://...jpg" />
         <Field label="Servicios (separados por coma)" value={services} onChangeText={setServices} testID="f-services" placeholder="Frenos, Cambio de aceite" />
+
+        <Text style={styles.sectionLabel}>Puntuación en Google</Text>
+        <View style={styles.ratingRow}>
+          <View style={{ flex: 1 }}>
+            <Field
+              label="Puntuación (0 a 5)"
+              value={rating}
+              onChangeText={setRating}
+              testID="f-rating"
+              keyboardType="decimal-pad"
+              placeholder="4.7"
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Field
+              label="N° de reseñas"
+              value={reviewCount}
+              onChangeText={setReviewCount}
+              testID="f-reviews"
+              keyboardType="number-pad"
+              placeholder="15"
+            />
+          </View>
+        </View>
+
         <Field
           label="Horarios (uno por línea, formato Día: hora)"
           value={hoursText}
@@ -283,6 +330,14 @@ const styles = StyleSheet.create({
   iconBtn: { padding: spacing.sm },
   title: { fontSize: typography.xl, fontWeight: "800", color: colors.onSurface },
   label: { fontSize: typography.sm, fontWeight: "700", color: colors.onSurfaceSecondary, marginBottom: spacing.xs },
+  sectionLabel: {
+    fontSize: typography.base,
+    fontWeight: "800",
+    color: colors.onSurface,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  ratingRow: { flexDirection: "row", gap: spacing.md },
   input: {
     backgroundColor: colors.surfaceSecondary,
     borderRadius: radius.md,

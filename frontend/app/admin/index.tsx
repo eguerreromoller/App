@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   FlatList,
   Pressable,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +24,7 @@ export default function AdminDashboard() {
   const [items, setItems] = useState<Workshop[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
     const ok = await isLoggedIn();
@@ -61,6 +63,17 @@ export default function AdminDashboard() {
     }
   };
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(
+      (w) =>
+        w.name.toLowerCase().includes(q) ||
+        w.comuna.toLowerCase().includes(q) ||
+        w.category.toLowerCase().includes(q)
+    );
+  }, [items, search]);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]} testID="admin-dashboard">
       <View style={styles.header}>
@@ -69,11 +82,31 @@ export default function AdminDashboard() {
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>Panel de talleres</Text>
-          <Text style={styles.subtitle}>{items.length} talleres</Text>
+          <Text style={styles.subtitle}>
+            {filtered.length} de {items.length} talleres
+          </Text>
         </View>
         <Pressable onPress={onLogout} style={styles.iconBtn} testID="admin-logout">
           <Ionicons name="log-out-outline" size={22} color={colors.error} />
         </Pressable>
+      </View>
+
+      <View style={styles.searchWrap}>
+        <Ionicons name="search" size={18} color={colors.onSurfaceSecondary} />
+        <TextInput
+          testID="admin-search"
+          style={styles.searchInput}
+          placeholder="Buscar por nombre o comuna para editar"
+          placeholderTextColor={colors.onSurfaceSecondary}
+          value={search}
+          onChangeText={setSearch}
+          autoCapitalize="none"
+        />
+        {!!search && (
+          <Pressable onPress={() => setSearch("")} testID="admin-search-clear">
+            <Ionicons name="close-circle" size={18} color={colors.onSurfaceSecondary} />
+          </Pressable>
+        )}
       </View>
 
       {loading ? (
@@ -82,9 +115,16 @@ export default function AdminDashboard() {
         </View>
       ) : (
         <FlatList
-          data={items}
+          data={filtered}
           keyExtractor={(i) => i.id}
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: 120, paddingTop: spacing.sm }}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap} testID="admin-empty">
+              <Ionicons name="search-outline" size={48} color={colors.onSurfaceSecondary} />
+              <Text style={styles.emptyText}>No se encontraron talleres para “{search}”</Text>
+            </View>
+          }
           renderItem={({ item }) => (
             <View style={styles.row} testID={`admin-row-${item.id}`}>
               <Image source={{ uri: item.image_url }} style={styles.rowImg} contentFit="cover" />
@@ -159,6 +199,20 @@ const styles = StyleSheet.create({
   iconBtn: { padding: spacing.sm },
   title: { fontSize: typography.xl, fontWeight: "800", color: colors.onSurface },
   subtitle: { fontSize: typography.sm, color: colors.onSurfaceSecondary, marginTop: 2 },
+  searchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.md,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+  },
+  searchInput: { flex: 1, color: colors.onSurface, fontSize: typography.lg, padding: 0 },
+  emptyWrap: { alignItems: "center", padding: spacing.xxl, gap: spacing.md },
+  emptyText: { color: colors.onSurfaceSecondary, fontSize: typography.base, textAlign: "center" },
   row: {
     flexDirection: "row",
     alignItems: "center",
