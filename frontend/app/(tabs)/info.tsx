@@ -26,6 +26,9 @@ export default function InfoScreen() {
     router.push((ok ? "/admin" : "/admin/login") as any);
   };
 
+  const openPrivacidad = () => router.push("/legal?doc=privacidad" as any);
+  const openTerminos = () => router.push("/legal?doc=terminos" as any);
+
   return (
     <ScrollView
       style={[styles.container, { paddingTop: insets.top }]}
@@ -89,6 +92,24 @@ export default function InfoScreen() {
           <Ionicons name="logo-instagram" size={20} color={colors.brandPrimary} />
         </View>
         <Text style={[styles.rowTitle, { flex: 1 }]}>Instagram</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.onSurfaceSecondary} />
+      </Pressable>
+
+      <Text style={styles.section}>Legal</Text>
+
+      <Pressable style={styles.row} onPress={openPrivacidad} testID="row-privacidad">
+        <View style={[styles.iconBox, { backgroundColor: colors.brandTertiary }]}>
+          <Ionicons name="shield-checkmark" size={20} color={colors.brandPrimary} />
+        </View>
+        <Text style={[styles.rowTitle, { flex: 1 }]}>Política de Privacidad</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.onSurfaceSecondary} />
+      </Pressable>
+
+      <Pressable style={styles.row} onPress={openTerminos} testID="row-terminos">
+        <View style={[styles.iconBox, { backgroundColor: colors.brandTertiary }]}>
+          <Ionicons name="document-text" size={20} color={colors.brandPrimary} />
+        </View>
+        <Text style={[styles.rowTitle, { flex: 1 }]}>Términos de Uso</Text>
         <Ionicons name="chevron-forward" size={18} color={colors.onSurfaceSecondary} />
       </Pressable>
 

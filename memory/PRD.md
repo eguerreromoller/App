@@ -40,6 +40,9 @@ Bottom tabs: Inicio, Categorías, Favoritos, Info. Stack: `/workshops?category=�
 
 ## Backlog / Next
 - Import real workshop dataset (CSV/JSON or scrape) — bulk import.
+
+## Legal
+- Privacy Policy + Terms of Use screens (src/legal.ts content, app/legal.tsx renderer, /legal?doc=privacidad|terminos). Linked from Info tab "Legal" section. Content: Grupo Moller SpA (Leyes 19.628 / 21.719).
 - Image upload from device (Emergent Object Storage) instead of pasting URL.
 - Optional native map view (react-native-maps) + geolocation.
 - Ratings/reviews submission.
