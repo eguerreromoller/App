@@ -18,7 +18,8 @@ for line in FRONTEND_ENV.read_text().splitlines():
 assert BASE_URL, "EXPO_PUBLIC_BACKEND_URL not found in /app/frontend/.env"
 
 ADMIN_EMAIL = "contacto@vitrinaautomotriz.cl"
-ADMIN_PASSWORD = "1713132"
+ADMIN_PASSWORD = "Qwerqwer11"
+OLD_ADMIN_PASSWORD = "1713132"
 
 SAMPLE_PAYLOAD = {
     "name": "TEST_Taller Pytest",
@@ -64,6 +65,17 @@ def test_login_wrong_password(s):
     r = s.post(
         f"{BASE_URL}/api/auth/login",
         data={"username": ADMIN_EMAIL, "password": "wrong-pass"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=15,
+    )
+    assert r.status_code == 401
+
+
+def test_login_old_password_rejected(s):
+    """Old password 1713132 should no longer work; new is Qwerqwer11."""
+    r = s.post(
+        f"{BASE_URL}/api/auth/login",
+        data={"username": ADMIN_EMAIL, "password": OLD_ADMIN_PASSWORD},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         timeout=15,
     )

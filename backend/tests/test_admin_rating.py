@@ -7,7 +7,7 @@ BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://taller-finder.prev
 API = f"{BASE_URL}/api"
 
 ADMIN_EMAIL = "contacto@vitrinaautomotriz.cl"
-ADMIN_PASSWORD = "1713132"
+ADMIN_PASSWORD = "Qwerqwer11"
 
 
 @pytest.fixture(scope="module")
