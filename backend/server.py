@@ -104,6 +104,7 @@ class Workshop(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     category: str
+    categories: List[str] = []
     description: str
     address: str
     comuna: str
@@ -126,6 +127,7 @@ class Workshop(BaseModel):
 class WorkshopCreate(BaseModel):
     name: str
     category: str
+    categories: List[str] = []
     description: str
     address: str
     comuna: str
@@ -377,6 +379,16 @@ async def seed_data():
             await db.workshops.insert_many(docs)
         logging.info(f"Seeded {len(docs)} workshops")
 
+    # Migration: ensure every workshop has a `categories` array (rubros).
+    await db.workshops.update_many(
+        {"categories": {"$exists": False}},
+        [{"$set": {"categories": ["$category"]}}],
+    )
+    await db.workshops.update_many(
+        {"categories": {"$size": 0}},
+        [{"$set": {"categories": ["$category"]}}],
+    )
+
     # Idempotent admin seed
     await db.admins.create_index("email", unique=True, name="admin_email_unique")
     existing = await db.admins.find_one({"email": ADMIN_EMAIL}, {"_id": 1})
@@ -400,6 +412,17 @@ async def get_categories():
     return [Category(**c) for c in CATEGORIES]
 
 
+@api_router.get("/categories/counts")
+async def get_category_counts():
+    counts: Dict[str, int] = {}
+    for c in CATEGORIES:
+        key = c["key"]
+        counts[key] = await db.workshops.count_documents(
+            {"$or": [{"category": key}, {"categories": key}]}
+        )
+    return counts
+
+
 @api_router.get("/comunas", response_model=List[str])
 async def get_comunas():
     comunas = await db.workshops.distinct("comuna")
@@ -420,18 +443,19 @@ async def list_workshops(
     comuna: Optional[str] = Query(None),
     limit: int = Query(100, le=200),
 ):
-    q: Dict = {}
+    and_conditions: List[Dict] = []
     if category:
-        q["category"] = category
+        and_conditions.append({"$or": [{"category": category}, {"categories": category}]})
     if comuna:
-        q["comuna"] = comuna
+        and_conditions.append({"comuna": comuna})
     if search:
-        q["$or"] = [
+        and_conditions.append({"$or": [
             {"name": {"$regex": search, "$options": "i"}},
             {"description": {"$regex": search, "$options": "i"}},
             {"services": {"$regex": search, "$options": "i"}},
             {"comuna": {"$regex": search, "$options": "i"}},
-        ]
+        ]})
+    q: Dict = {"$and": and_conditions} if and_conditions else {}
     cursor = db.workshops.find(q, {"_id": 0}).limit(limit)
     items = await cursor.to_list(length=limit)
     return [Workshop(**i) for i in items]
@@ -464,9 +488,22 @@ async def me(admin: AdminDep):
 
 
 # ----- Admin workshop CRUD (protected) -----
+def _normalize_categories(data: Dict) -> Dict:
+    cats = [c for c in (data.get("categories") or []) if c]
+    if not cats and data.get("category"):
+        cats = [data["category"]]
+    # dedupe preserving order
+    seen = set()
+    cats = [c for c in cats if not (c in seen or seen.add(c))]
+    data["categories"] = cats
+    if cats:
+        data["category"] = cats[0]
+    return data
+
+
 @api_router.post("/workshops", response_model=Workshop)
 async def create_workshop(payload: WorkshopCreate, admin: AdminDep):
-    ws = Workshop(**payload.dict())
+    ws = Workshop(**_normalize_categories(payload.dict()))
     await db.workshops.insert_one(ws.dict())
     return ws
 
@@ -476,7 +513,7 @@ async def update_workshop(workshop_id: str, payload: WorkshopCreate, admin: Admi
     existing = await db.workshops.find_one({"id": workshop_id})
     if not existing:
         raise HTTPException(status_code=404, detail="Workshop not found")
-    updates = payload.dict()
+    updates = _normalize_categories(payload.dict())
     await db.workshops.update_one({"id": workshop_id}, {"$set": updates})
     merged = await db.workshops.find_one({"id": workshop_id}, {"_id": 0})
     return Workshop(**merged)
@@ -514,8 +551,10 @@ async def _build_catalog() -> str:
     lines = []
     for w in items:
         servicios = ", ".join(w.get("services", []))
+        cats = w.get("categories") or [w.get("category", "")]
+        rubros = ", ".join(_cat_name(c) for c in cats if c)
         lines.append(
-            f"- ID: {w['id']} | Nombre: {w['name']} | Categoría: {_cat_name(w.get('category',''))} "
+            f"- ID: {w['id']} | Nombre: {w['name']} | Rubros: {rubros} "
             f"| Comuna: {w.get('comuna','')} | Servicios: {servicios}"
         )
     return "\n".join(lines)

@@ -7,7 +7,6 @@ import {
   Pressable,
   ActivityIndicator,
   Switch,
-  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -31,7 +30,7 @@ export default function AdminForm() {
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState("");
-  const [category, setCategory] = useState("");
+  const [selectedCats, setSelectedCats] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
   const [comuna, setComuna] = useState("");
@@ -58,7 +57,7 @@ export default function AdminForm() {
       if (id) {
         const w = await api.workshop(id);
         setName(w.name);
-        setCategory(w.category);
+        setSelectedCats(w.categories?.length ? w.categories : [w.category]);
         setDescription(w.description);
         setAddress(w.address);
         setComuna(w.comuna);
@@ -76,8 +75,6 @@ export default function AdminForm() {
         setFeatured(w.is_featured);
         setRating(w.rating != null ? String(w.rating) : "");
         setReviewCount(w.review_count != null ? String(w.review_count) : "");
-      } else if (c.length > 0) {
-        setCategory(c[0].key);
       }
     } finally {
       setLoading(false);
@@ -88,9 +85,15 @@ export default function AdminForm() {
     init();
   }, [init]);
 
+  const toggleCat = (key: string) => {
+    setSelectedCats((prev) =>
+      prev.includes(key) ? prev.filter((c) => c !== key) : [...prev, key]
+    );
+  };
+
   const buildPayload = (): WorkshopPayload | null => {
-    if (!name.trim() || !category || !address.trim() || !comuna.trim() || !phone.trim() || !imageUrl.trim()) {
-      setError("Completa los campos obligatorios (*)");
+    if (!name.trim() || selectedCats.length === 0 || !address.trim() || !comuna.trim() || !phone.trim() || !imageUrl.trim()) {
+      setError("Completa los campos obligatorios (*) y elige al menos un rubro");
       return null;
     }
     const hours: Record<string, string> = {};
@@ -122,7 +125,8 @@ export default function AdminForm() {
 
     return {
       name: name.trim(),
-      category,
+      category: selectedCats[0],
+      categories: selectedCats,
       description: description.trim(),
       address: address.trim(),
       comuna: comuna.trim(),
@@ -187,24 +191,31 @@ export default function AdminForm() {
       >
         <Field label="Nombre *" value={name} onChangeText={setName} testID="f-name" placeholder="Taller Mecánica Andes" />
 
-        <Text style={styles.label}>Categoría *</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catRow}>
-          {cats.map((c) => (
-            <Pressable
-              key={c.key}
-              testID={`f-cat-${c.key}`}
-              onPress={() => setCategory(c.key)}
-              style={[
-                styles.catChip,
-                category === c.key && { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
-              ]}
-            >
-              <Text style={[styles.catChipText, category === c.key && { color: colors.onBrandPrimary }]}>
-                {c.name}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        <Text style={styles.label}>Rubros * (puedes elegir varios)</Text>
+        <Text style={styles.helpText}>
+          El taller aparecerá en cada rubro seleccionado y Turbo podrá derivarlo por cualquiera de ellos.
+        </Text>
+        <View style={styles.catWrap}>
+          {cats.map((c) => {
+            const on = selectedCats.includes(c.key);
+            return (
+              <Pressable
+                key={c.key}
+                testID={`f-cat-${c.key}`}
+                onPress={() => toggleCat(c.key)}
+                style={[
+                  styles.catChip,
+                  on && { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
+                ]}
+              >
+                {on && <Ionicons name="checkmark" size={14} color={colors.onBrandPrimary} style={{ marginRight: 4 }} />}
+                <Text style={[styles.catChipText, on && { color: colors.onBrandPrimary }]}>
+                  {c.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
         <Field label="Descripción" value={description} onChangeText={setDescription} testID="f-desc" multiline placeholder="Descripción del taller" />
         <Field label="Dirección *" value={address} onChangeText={setAddress} testID="f-address" placeholder="Av. Siempre Viva 123" />
@@ -349,10 +360,14 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   catRow: { gap: spacing.sm, paddingVertical: spacing.xs, marginBottom: spacing.md },
+  catWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.md },
+  helpText: { fontSize: typography.sm, color: colors.onSurfaceSecondary, marginBottom: spacing.sm, lineHeight: 18 },
   catChip: {
+    flexDirection: "row",
+    alignItems: "center",
     flexShrink: 0,
     paddingHorizontal: spacing.md,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: radius.pill,
     backgroundColor: colors.brandSecondary,
     borderWidth: 1,

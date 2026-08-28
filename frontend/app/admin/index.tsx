@@ -7,6 +7,7 @@ import {
   Pressable,
   ActivityIndicator,
   TextInput,
+  ScrollView,
 } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,7 +15,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
-import { api, Workshop } from "@/src/api";
+import { api, Category, Workshop } from "@/src/api";
 import { adminLogout, deleteWorkshop, isLoggedIn } from "@/src/admin";
 import { colors, radius, shadow, spacing, typography } from "@/src/theme";
 
@@ -22,6 +23,9 @@ export default function AdminDashboard() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [items, setItems] = useState<Workshop[]>([]);
+  const [cats, setCats] = useState<Category[]>([]);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -33,8 +37,14 @@ export default function AdminDashboard() {
       return;
     }
     try {
-      const all = await api.workshops({});
+      const [all, c, cnt] = await Promise.all([
+        api.workshops({}),
+        api.categories(),
+        api.categoryCounts(),
+      ]);
       setItems(all);
+      setCats(c);
+      setCounts(cnt);
     } finally {
       setLoading(false);
     }
@@ -63,16 +73,26 @@ export default function AdminDashboard() {
     }
   };
 
+  const catName = useMemo(() => {
+    const m: Record<string, string> = {};
+    cats.forEach((c) => (m[c.key] = c.name));
+    return m;
+  }, [cats]);
+
+  const catsOf = (w: Workshop) => (w.categories?.length ? w.categories : [w.category]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter(
-      (w) =>
+    return items.filter((w) => {
+      if (selectedCat && !catsOf(w).includes(selectedCat)) return false;
+      if (!q) return true;
+      return (
         w.name.toLowerCase().includes(q) ||
         w.comuna.toLowerCase().includes(q) ||
-        w.category.toLowerCase().includes(q)
-    );
-  }, [items, search]);
+        catsOf(w).some((c) => (catName[c] || c).toLowerCase().includes(q))
+      );
+    });
+  }, [items, search, selectedCat, catName]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]} testID="admin-dashboard">
@@ -109,6 +129,27 @@ export default function AdminDashboard() {
         )}
       </View>
 
+      {/* Category counts filter */}
+      <View style={styles.catRowWrap}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catRow}>
+          <CatChip
+            testID="admin-cat-all"
+            label={`Todas · ${items.length}`}
+            active={!selectedCat}
+            onPress={() => setSelectedCat(null)}
+          />
+          {cats.map((c) => (
+            <CatChip
+              key={c.key}
+              testID={`admin-cat-${c.key}`}
+              label={`${c.name} · ${counts[c.key] ?? 0}`}
+              active={selectedCat === c.key}
+              onPress={() => setSelectedCat(selectedCat === c.key ? null : c.key)}
+            />
+          ))}
+        </ScrollView>
+      </View>
+
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator color={colors.brandPrimary} />
@@ -122,7 +163,7 @@ export default function AdminDashboard() {
           ListEmptyComponent={
             <View style={styles.emptyWrap} testID="admin-empty">
               <Ionicons name="search-outline" size={48} color={colors.onSurfaceSecondary} />
-              <Text style={styles.emptyText}>No se encontraron talleres para “{search}”</Text>
+              <Text style={styles.emptyText}>No se encontraron talleres</Text>
             </View>
           }
           renderItem={({ item }) => (
@@ -133,14 +174,21 @@ export default function AdminDashboard() {
                   {item.name}
                 </Text>
                 <Text style={styles.rowMeta} numberOfLines={1}>
-                  {item.comuna} · {item.category}
+                  {item.comuna}
                 </Text>
-                {item.is_featured && (
-                  <View style={styles.featBadge}>
-                    <Ionicons name="star" size={10} color="#F59F00" />
-                    <Text style={styles.featText}>Destacado</Text>
-                  </View>
-                )}
+                <View style={styles.badgeRow}>
+                  {catsOf(item).map((c) => (
+                    <View key={c} style={styles.catBadge}>
+                      <Text style={styles.catBadgeText}>{catName[c] || c}</Text>
+                    </View>
+                  ))}
+                  {item.is_featured && (
+                    <View style={styles.featBadge}>
+                      <Ionicons name="star" size={10} color="#F59F00" />
+                      <Text style={styles.featText}>Destacado</Text>
+                    </View>
+                  )}
+                </View>
               </View>
               <Pressable
                 onPress={() => router.push(`/admin/form?id=${item.id}` as any)}
@@ -184,9 +232,56 @@ export default function AdminDashboard() {
   );
 }
 
+function CatChip({
+  label,
+  active,
+  onPress,
+  testID,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  testID?: string;
+}) {
+  return (
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      hitSlop={{ top: 8, bottom: 8 }}
+      style={[styles.catChip, active && styles.catChipActive]}
+    >
+      <Text style={[styles.catChipText, active && styles.catChipTextActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
+  catRowWrap: { paddingVertical: spacing.sm, borderBottomWidth: 0.5, borderBottomColor: colors.border },
+  catRow: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: "center" },
+  catChip: {
+    flexShrink: 0,
+    height: 34,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  catChipActive: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
+  catChipText: { color: colors.onSurfaceTertiary, fontSize: typography.sm, fontWeight: "700" },
+  catChipTextActive: { color: colors.onBrandPrimary },
+  badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 6 },
+  catBadge: {
+    backgroundColor: colors.brandSecondary,
+    borderRadius: radius.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  catBadgeText: { fontSize: 10, color: colors.onBrandSecondary, fontWeight: "700" },
   header: {
     flexDirection: "row",
     alignItems: "center",

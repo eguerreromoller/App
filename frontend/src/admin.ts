@@ -44,6 +44,7 @@ export async function isLoggedIn(): Promise<boolean> {
 export type WorkshopPayload = {
   name: string;
   category: string;
+  categories: string[];
   description: string;
   address: string;
   comuna: string;

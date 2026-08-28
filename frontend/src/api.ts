@@ -9,6 +9,7 @@ export type Workshop = {
   id: string;
   name: string;
   category: string;
+  categories: string[];
   description: string;
   address: string;
   comuna: string;
@@ -44,6 +45,7 @@ async function req<T>(path: string): Promise<T> {
 
 export const api = {
   categories: () => req<Category[]>("/categories"),
+  categoryCounts: () => req<Record<string, number>>("/categories/counts"),
   comunas: () => req<string[]>("/comunas"),
   featured: () => req<Workshop[]>("/workshops/featured"),
   workshops: (params: { search?: string; category?: string; comuna?: string } = {}) => {
