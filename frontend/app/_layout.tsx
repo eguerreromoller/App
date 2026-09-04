@@ -51,6 +51,7 @@ export default function RootLayout() {
             <Stack.Screen name="admin/login" options={{ presentation: "card", animation: "slide_from_right" }} />
             <Stack.Screen name="admin/index" options={{ presentation: "card", animation: "slide_from_right" }} />
             <Stack.Screen name="admin/form" options={{ presentation: "card", animation: "slide_from_right" }} />
+            <Stack.Screen name="admin/import" options={{ presentation: "card", animation: "slide_from_right" }} />
             <Stack.Screen name="chat" options={{ presentation: "card", animation: "slide_from_bottom" }} />
             <Stack.Screen name="legal" options={{ presentation: "card", animation: "slide_from_right" }} />
           </Stack>

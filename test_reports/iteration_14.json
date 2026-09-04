@@ -1,0 +1,36 @@
+{
+  "summary": "Tested CSV bulk-import feature end-to-end. Backend: 6/6 pytest cases pass covering 401 auth, dry_run preview, commit + retrievability by category, dedupe on rerun, invalid-name skipping, and multi-rubro splitting (e.g. 'Mecánica general / Frenos' -> ['mecanica-general','frenos']). Frontend: unauth /admin/import correctly redirects to /admin/login; after admin login, admin-import icon in dashboard header navigates to admin-import-screen which renders info box + import-pick button ('Seleccionar archivo CSV'). All TESTCSV_ workshops were cleaned up (baseline 389 workshops preserved). Minor deprecation warning: 'shadow*' style props deprecated in React Native for web, should use boxShadow (non-blocking).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "styles (multiple screens)", "issue": "React Native web reports deprecation warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Search for shadowOpacity/shadowRadius/shadowOffset/shadowColor usages (likely in /app/frontend/src/theme.ts shadow.floating) and migrate to boxShadow."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_csv_import.py",
+    "/app/test_reports/pytest/csv_import_results.xml"
+  ],
+  "action_items": [
+    "Optional: migrate 'shadow*' style props to 'boxShadow' in shared theme (likely /app/frontend/src/theme.ts) to silence RN web deprecation warning."
+  ],
+  "critical_code_review_comments": [
+    "Duplicate-detection in /api/workshops/import is case/accent-sensitive because it queries Mongo on the raw name+comuna. Normalized _strip() is only used for the in-batch seen_keys. So two CSV rows with 'Ñuñoa' vs 'nunoa' or 'Taller X' vs 'TALLER X' inserted in separate imports would be treated as new. Consider matching on a normalized field (or add a case-insensitive Mongo query) for robust dedupe across imports.",
+    "server.py is 890 lines; consider splitting routers (auth, workshops, chat, import) into separate modules.",
+    "server.py uses deprecated FastAPI @app.on_event('startup'/'shutdown'); prefer lifespan context manager."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_csv_import.py (new)"
+  ],
+  "success_rate": {"backend": "100% (6/6)", "frontend": "100% (nav + render verified; file picker not driven per instructions)"},
+  "seed_data_creation": "Test inserted 3 workshops (TESTCSV_Lavado Uno, TESTCSV_Mec Uno, TESTCSV_MultiRubro) and deleted all of them via autouse cleanup fixture. Verified 0 leftover TESTCSV_ rows and baseline count of 389 workshops restored.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend tests live in /app/backend/tests/test_csv_import.py (pytest). Admin login is form-urlencoded POST /api/auth/login. Cleanup fixture wipes all workshops whose name starts with 'TESTCSV_'. Do not delete real workshops (baseline 389).",
+  "rca_of_issue": ""
+}

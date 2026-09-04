@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import re
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -642,6 +643,228 @@ async def chat(payload: ChatIn):
     ])
 
     return ChatOut(reply=reply_text, recommendations=recs)
+
+
+# ----- CSV bulk import (protected) -----
+import csv as _csv
+import io as _io
+import unicodedata as _ud
+import random as _random
+
+_RUBRO_MAP = {
+    "vulcanizacion, alineacion y balanceo": "neumaticos",
+    "vulcanizacion": "neumaticos",
+    "neumaticos": "neumaticos",
+    "alineacion y balanceo": "neumaticos",
+    "electricidad automotriz": "mecanica-general",
+    "mecanica general": "mecanica-general",
+    "mecanica": "mecanica-general",
+    "mecanica-general": "mecanica-general",
+    "personalizacion automotriz": "personalizacion",
+    "personalizacion": "personalizacion",
+    "gruas": "gruas",
+    "grua": "gruas",
+    "desabolladura y pintura": "desabolladura-pintura",
+    "desabolladura-pintura": "desabolladura-pintura",
+    "pintura": "desabolladura-pintura",
+    "frenos": "frenos",
+    "lavado": "lavado",
+    "lavado de vehiculos": "lavado",
+    "carwash": "lavado",
+    "car wash": "lavado",
+    "lubricacion": "lubricacion",
+    "lubricentro": "lubricacion",
+    "distribuidores": "distribuidores",
+    "distribuidor": "distribuidores",
+    "repuestos": "distribuidores",
+}
+
+_COMUNA_COORDS = {
+    "puente alto": (-33.6116, -70.5758), "maipu": (-33.5110, -70.7580),
+    "la florida": (-33.5220, -70.5980), "macul": (-33.4900, -70.5990),
+    "san bernardo": (-33.5920, -70.6990), "recoleta": (-33.4020, -70.6390),
+    "quilicura": (-33.3670, -70.7290), "penalolen": (-33.4880, -70.5460),
+    "las condes": (-33.4088, -70.5697), "la reina": (-33.4460, -70.5370),
+    "independencia": (-33.4160, -70.6640), "la cisterna": (-33.5290, -70.6620),
+    "quinta normal": (-33.4270, -70.6980), "santiago centro": (-33.4489, -70.6693),
+    "santiago": (-33.4489, -70.6693), "nunoa": (-33.4569, -70.5990),
+    "pudahuel": (-33.4420, -70.7620), "colina": (-33.2020, -70.6740),
+    "providencia": (-33.4260, -70.6190), "estacion central": (-33.4610, -70.6980),
+    "renca": (-33.4040, -70.7260), "conchali": (-33.3830, -70.6750),
+    "san miguel": (-33.4970, -70.6510), "lo prado": (-33.4440, -70.7260),
+    "cerrillos": (-33.4960, -70.7150), "cerro navia": (-33.4230, -70.7410),
+    "huechuraba": (-33.3690, -70.6390), "la pintana": (-33.5830, -70.6340),
+    "lampa": (-33.2860, -70.8760), "el bosque": (-33.5620, -70.6740),
+    "lo barnechea": (-33.3510, -70.5180), "la granja": (-33.5410, -70.6250),
+    "lo espejo": (-33.5220, -70.6890), "pirque": (-33.6400, -70.5490),
+    "pedro aguirre cerda": (-33.4870, -70.6720), "san ramon": (-33.5370, -70.6420),
+    "vitacura": (-33.3900, -70.5580), "san joaquin": (-33.4903, -70.6274),
+}
+_DEFAULT_COORD = (-33.4489, -70.6693)
+
+_CAT_IMG = {c["key"]: c["image_url"] for c in CATEGORIES}
+_CAT_SERVICES = {
+    "neumaticos": ["Vulcanización", "Alineación", "Balanceo"],
+    "mecanica-general": ["Mecánica general", "Diagnóstico", "Sistema eléctrico"],
+    "personalizacion": ["Personalización", "Accesorios"],
+    "gruas": ["Servicio de grúa", "Asistencia en carretera"],
+    "desabolladura-pintura": ["Desabolladura", "Pintura", "Pulido"],
+    "frenos": ["Frenos", "Pastillas", "Discos"],
+    "lavado": ["Lavado exterior", "Lavado interior"],
+    "lubricacion": ["Cambio de aceite", "Filtros"],
+    "distribuidores": ["Repuestos", "Accesorios"],
+}
+
+
+def _strip(s: str) -> str:
+    s = _ud.normalize("NFKD", s or "").encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"\s+", " ", s.strip().lower())
+
+
+def _map_rubro(cell: str) -> List[str]:
+    whole = _strip(cell)
+    if not whole:
+        return []
+    if whole in _RUBRO_MAP:
+        return [_RUBRO_MAP[whole]]
+    cats: List[str] = []
+    for part in re.split(r"[/;|]", whole):
+        p = part.strip()
+        if p in _RUBRO_MAP and _RUBRO_MAP[p] not in cats:
+            cats.append(_RUBRO_MAP[p])
+    return cats
+
+
+def _norm_phone(raw: str) -> str:
+    if not raw:
+        return ""
+    digits = re.sub(r"[^\d]", "", raw)
+    if not digits:
+        return ""
+    if digits.startswith("56"):
+        digits = digits[2:]
+    if len(digits) == 9 and digits.startswith("9"):
+        return "+56" + digits
+    if len(digits) == 8:
+        return "+562" + digits
+    return "+56" + digits
+
+
+def _find(row: Dict[str, str], *cands: str) -> str:
+    for c in cands:
+        for k, v in row.items():
+            if c in _strip(k):
+                return (v or "").strip()
+    return ""
+
+
+class CsvImportIn(BaseModel):
+    csv_text: str
+    dry_run: bool = True
+
+
+@api_router.post("/workshops/import")
+async def import_workshops(payload: CsvImportIn, admin: AdminDep):
+    text = payload.csv_text
+    if text and text[0] == "\ufeff":
+        text = text[1:]
+    reader = _csv.DictReader(_io.StringIO(text))
+    if not reader.fieldnames:
+        raise HTTPException(status_code=400, detail="CSV vacío o sin encabezados")
+
+    _random.seed(7)
+    to_insert: List[Dict] = []
+    duplicates = 0
+    unmapped = 0
+    invalid = 0
+    sample: List[Dict] = []
+    seen_keys = set()
+
+    for row in reader:
+        name = _find(row, "nombre", "name")
+        comuna = _find(row, "comuna") or "Santiago"
+        if not name:
+            invalid += 1
+            continue
+        cats = _map_rubro(_find(row, "rubro", "categoria", "category"))
+        if not cats:
+            unmapped += 1
+            continue
+
+        dup_key = (_strip(name), _strip(comuna))
+        if dup_key in seen_keys or await db.workshops.find_one({"name": name, "comuna": comuna}):
+            duplicates += 1
+            continue
+        seen_keys.add(dup_key)
+
+        category = cats[0]
+        address = _find(row, "direccion completa", "direccion", "address") or comuna
+        rating_raw = _find(row, "puntuacion", "rating")
+        try:
+            rating = float(rating_raw.replace(",", ".")) if rating_raw else 4.5
+        except ValueError:
+            rating = 4.5
+        reviews_raw = _find(row, "numero de resenas", "resenas", "reviews")
+        try:
+            reviews = int(re.sub(r"[^\d]", "", reviews_raw)) if reviews_raw else 0
+        except ValueError:
+            reviews = 0
+        phone = _norm_phone(_find(row, "telefono", "phone"))
+        whatsapp = _norm_phone(_find(row, "whatsapp")) or (phone if phone.startswith("+569") else None)
+        website = _find(row, "sitio web", "website", "web")
+        social = _find(row, "instagram/facebook", "instagram", "facebook", "red social")
+        if website and not website.lower().startswith("http"):
+            website = "https://" + website
+        if not website and social and "." in social:
+            website = "https://" + social.lstrip("@").strip()
+        if website and (_strip(website)[:3] in ("na", "no") or _strip(website) in ("na", "n/a", "no")):
+            website = None
+
+        tipo = _find(row, "tipo de negocio")
+        fuertes = _find(row, "puntos fuertes")
+        publico = _find(row, "publico objetivo")
+        parts = []
+        if tipo:
+            parts.append(tipo + ".")
+        if fuertes:
+            parts.append("Destaca por: " + fuertes + ".")
+        if publico:
+            parts.append("Ideal para: " + publico + ".")
+        description = _find(row, "descripcion", "description") or " ".join(parts) or "Prestador de servicios automotrices."
+
+        clat, clng = _COMUNA_COORDS.get(_strip(comuna), _DEFAULT_COORD)
+        lat = round(clat + _random.uniform(-0.012, 0.012), 6)
+        lng = round(clng + _random.uniform(-0.012, 0.012), 6)
+
+        doc = Workshop(
+            name=name, category=category, categories=cats, description=description,
+            address=address, comuna=comuna, phone=phone, whatsapp=whatsapp,
+            website=website or None, lat=lat, lng=lng,
+            image_url=_CAT_IMG.get(category, _CAT_IMG["mecanica-general"]),
+            services=_CAT_SERVICES.get(category, []),
+            hours={"Lunes-Viernes": "09:00 - 18:30", "Sabado": "09:00 - 14:00"},
+            rating=rating, review_count=reviews,
+        ).dict()
+        to_insert.append(doc)
+        if len(sample) < 8:
+            sample.append({"name": name, "comuna": comuna,
+                           "categories": [_cat_name(c) for c in cats]})
+
+    inserted = 0
+    if not payload.dry_run and to_insert:
+        await db.workshops.insert_many(to_insert)
+        inserted = len(to_insert)
+
+    return {
+        "dry_run": payload.dry_run,
+        "to_insert": len(to_insert),
+        "duplicates": duplicates,
+        "unmapped": unmapped,
+        "invalid": invalid,
+        "inserted": inserted,
+        "sample": sample,
+    }
+
 
 
 app.include_router(api_router)

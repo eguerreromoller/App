@@ -92,3 +92,22 @@ export async function deleteWorkshop(id: string): Promise<void> {
   const res = await authFetch(`/workshops/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error(await res.text());
 }
+
+export type ImportResult = {
+  dry_run: boolean;
+  to_insert: number;
+  duplicates: number;
+  unmapped: number;
+  invalid: number;
+  inserted: number;
+  sample: { name: string; comuna: string; categories: string[] }[];
+};
+
+export async function importWorkshopsCsv(csvText: string, dryRun: boolean): Promise<ImportResult> {
+  const res = await authFetch("/workshops/import", {
+    method: "POST",
+    body: JSON.stringify({ csv_text: csvText, dry_run: dryRun }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

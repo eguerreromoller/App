@@ -106,6 +106,9 @@ export default function AdminDashboard() {
             {filtered.length} de {items.length} talleres
           </Text>
         </View>
+        <Pressable onPress={() => router.push("/admin/import" as any)} style={styles.iconBtn} testID="admin-import">
+          <Ionicons name="cloud-upload-outline" size={22} color={colors.brandPrimary} />
+        </Pressable>
         <Pressable onPress={onLogout} style={styles.iconBtn} testID="admin-logout">
           <Ionicons name="log-out-outline" size={22} color={colors.error} />
         </Pressable>

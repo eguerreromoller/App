@@ -45,7 +45,7 @@ Bottom tabs: Inicio, Categorías, Favoritos, Info. Stack: `/workshops?category=�
 
 ## Backlog / Next
 - Import real workshop dataset (CSV/JSON or scrape) — bulk import.
-- CSV importer inside the admin panel (file picker + preview + dedupe).
+- CSV importer inside the admin panel (file picker + preview + dedupe) — DONE: POST /api/workshops/import (dry_run/commit), /admin/import screen, expo-document-picker + expo-file-system/legacy.
 - Image upload from device (Emergent Object Storage) instead of pasting URL.
 - Ratings/reviews submission.
 
