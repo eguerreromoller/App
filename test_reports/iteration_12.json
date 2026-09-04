@@ -1,0 +1,26 @@
+{
+  "summary": "Bug fix verified: workshops limit raised from 100 to 1000 (max 5000). Backend: 9/9 pytest tests passed - GET /api/workshops now returns 389 (>100) by default, ?limit=5000 returns 389, ?category=personalizacion&limit=5000 returns 75 matching /api/categories/counts, ?limit=100000 correctly rejected with 422, categories/counts still accurate, ALL 9 category filters match their reported counts exactly. Frontend: admin dashboard subtitle now shows '389 de 389 talleres' (was '1 de 100'), chip 'Personalización · 75' filters to '75 de 389 talleres', 'Todas · 389' resets, search 'santiago' -> '13 de 389 talleres' (filters within full loaded set). Regressions clean: Home tab renders workshops with categories chips, Mapa tab header shows '389 talleres' grouped by comuna (Cerrillos · 5, Cerro Navia, etc.). No mocked APIs. No data mutated.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_workshops_limit.py",
+    "/app/test_reports/pytest/workshops_limit_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py:415-423 /categories/counts still does N sequential count_documents (N=9). Not related to this fix but flagged previously; acceptable at 389 workshops.",
+    "Admin dashboard loads 5000 workshops in a single fetch. Fine now (~389) but consider server-side pagination or lazy loading if the dataset grows past ~2k."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "100%", "frontend": "100%" },
+  "seed_data_creation": "None. Read-only verification against existing 389 workshops.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Bug fix for the '1 de 100 talleres' cap is fully validated. Frontend admin testIDs: admin-dashboard, admin-search, admin-cat-all, admin-cat-{key} (e.g. admin-cat-personalizacion, admin-cat-lavado, admin-cat-mecanica-general). Backend list endpoint contract: GET /api/workshops accepts search/category/comuna/limit; limit defaults to 1000, max 5000, over-limit returns 422. Category keys: mecanica-general (109), desabolladura-pintura (12), gruas (26), neumaticos (101), lubricacion (1), frenos (8), lavado (57), personalizacion (75), distribuidores (1). Total = 389.",
+  "rca_of_issue": "Root cause: GET /api/workshops used Query(100, le=200) which capped results at 100 regardless of the DB size (~389). Admin dashboard called api.workshops() with no explicit limit, so it only received the first 100 documents. Category filters like personalizacion (whose members mostly sat past index 100) then had almost nothing to match on the client. Fix (already applied by main agent): raised default to Query(1000, le=5000), added optional `limit` param to api.workshops(), admin passes limit=5000. Verified via pytest and Playwright UI test - subtitle now reads '389 de 389 talleres' and Personalización chip lists 75 items."
+}

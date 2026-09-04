@@ -441,7 +441,7 @@ async def list_workshops(
     search: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
     comuna: Optional[str] = Query(None),
-    limit: int = Query(100, le=200),
+    limit: int = Query(1000, le=5000),
 ):
     and_conditions: List[Dict] = []
     if category:

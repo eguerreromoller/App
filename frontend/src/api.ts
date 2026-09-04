@@ -48,11 +48,12 @@ export const api = {
   categoryCounts: () => req<Record<string, number>>("/categories/counts"),
   comunas: () => req<string[]>("/comunas"),
   featured: () => req<Workshop[]>("/workshops/featured"),
-  workshops: (params: { search?: string; category?: string; comuna?: string } = {}) => {
+  workshops: (params: { search?: string; category?: string; comuna?: string; limit?: number } = {}) => {
     const qs = new URLSearchParams();
     if (params.search) qs.set("search", params.search);
     if (params.category) qs.set("category", params.category);
     if (params.comuna) qs.set("comuna", params.comuna);
+    if (params.limit) qs.set("limit", String(params.limit));
     const q = qs.toString();
     return req<Workshop[]>(`/workshops${q ? `?${q}` : ""}`);
   },

@@ -38,7 +38,7 @@ export default function AdminDashboard() {
     }
     try {
       const [all, c, cnt] = await Promise.all([
-        api.workshops({}),
+        api.workshops({ limit: 5000 }),
         api.categories(),
         api.categoryCounts(),
       ]);
