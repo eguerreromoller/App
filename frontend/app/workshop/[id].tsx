@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@react-native-vector-icons/ionicons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
@@ -37,7 +37,7 @@ export default function WorkshopDetailScreen() {
       const [ws, favs] = await Promise.all([api.workshop(id), getFavorites()]);
       setW(ws);
       setIsFav(favs.includes(id));
-    } catch (e: any) {
+    } catch {
       setError("No se pudo cargar el taller.");
     } finally {
       setLoading(false);

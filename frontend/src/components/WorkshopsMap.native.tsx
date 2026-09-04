@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import MapView, { Marker, Region } from "react-native-maps";
 import { Image } from "expo-image";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@react-native-vector-icons/ionicons";
 
 import { Workshop } from "@/src/api";
 import { colors, radius, shadow, spacing, typography } from "@/src/theme";

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { Image } from "expo-image";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@react-native-vector-icons/ionicons";
 
 import { Workshop } from "@/src/api";
 import { colors, radius, spacing, typography } from "@/src/theme";

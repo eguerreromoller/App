@@ -45,9 +45,13 @@ Bottom tabs: Inicio, Categorías, Favoritos, Info. Stack: `/workshops?category=�
 
 ## Backlog / Next
 - Import real workshop dataset (CSV/JSON or scrape) — bulk import.
+- CSV importer inside the admin panel (file picker + preview + dedupe).
+- Image upload from device (Emergent Object Storage) instead of pasting URL.
+- Ratings/reviews submission.
 
 ## Legal
 - Privacy Policy + Terms of Use screens (src/legal.ts content, app/legal.tsx renderer, /legal?doc=privacidad|terminos). Linked from Info tab "Legal" section. Content: Grupo Moller SpA (Leyes 19.628 / 21.719).
-- Image upload from device (Emergent Object Storage) instead of pasting URL.
-- Optional native map view (react-native-maps) + geolocation.
-- Ratings/reviews submission.
+
+## Platform / Upgrades
+- Upgraded Expo SDK 54 → 57 (expo 57.0.19, RN 0.86.3, React 19.2.3). Removed newArchEnabled/edgeToEdgeEnabled from app.json. Migrated icons from @expo/vector-icons to @react-native-vector-icons/ionicons (all screens); use-icon-fonts.ts preloads Ionicons.ttf. expo-doctor 20/20; regression 47/47 backend + frontend clean.
+

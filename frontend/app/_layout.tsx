@@ -22,10 +22,9 @@ const RNTextInputAny = RNTextInput as unknown as { defaultProps?: Record<string,
 RNTextInputAny.defaultProps = RNTextInputAny.defaultProps || {};
 RNTextInputAny.defaultProps.maxFontSizeMultiplier = 1.2;
 
-// Keep the native splash visible from cold start until icon fonts register.
-// Required because @expo/vector-icons' componentDidMount fallback fires
-// Font.loadAsync against a broken vendor path if any <Icon> mounts before
-// the family is registered — which throws on Android Expo Go.
+// Keep the native splash visible from cold start until the Ionicons font
+// (from @react-native-vector-icons/ionicons) is registered, so the first
+// painted frame already has glyphs instead of empty icon boxes.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
